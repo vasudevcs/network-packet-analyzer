@@ -1,7 +1,10 @@
 # Network Packet Analyzer with Anomaly Detection
 
 ## 📌 Overview
-This project is a **real-time network packet analyzer** built using **Python and Scapy**.  
+This project is a real-time network packet analyzer built using **Python and Scapy**.
+It automatically detects the local host IP at runtime, making the tool portable
+and usable across different systems without hardcoded configuration.
+  
 It captures live network traffic and detects **network anomalies** such as:
 
 - 🔍 **Port scanning attacks** (using a sliding time window)
@@ -23,6 +26,14 @@ The project focuses on **behavior-based detection**, similar to how basic **Intr
 ---
 
 ## 🧠 Detection Logic
+
+## ⚙️ Configuration
+
+- The analyzer **automatically detects the local machine’s IP address**
+  using a socket-based method.
+- No hardcoded IP addresses are used in the code.
+- This makes the tool portable and reusable across different networks
+  and systems without manual changes.
 
 ### 🔹 Port Scan Detection
 - Tracks destination ports accessed by a source IP
