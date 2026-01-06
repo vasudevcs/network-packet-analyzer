@@ -1,5 +1,18 @@
 from scapy.all import sniff, IP, TCP, ARP
 import time
+import socket
+
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Doesn't actually connect, just figures out local IP
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = "127.0.0.1"
+    finally:
+        s.close()
+    return ip
 
 # ---------------- MEMORY ----------------
 ports = {}              # IP -> list of (port, time)
@@ -7,7 +20,7 @@ last_ports_seen = {}    # IP -> last printed port set
 arp_table = {}
 
 # ---------------- CONFIG ----------------
-LOCAL_IP = "192.168.2.52"
+LOCAL_IP = get_local_ip()
 TIME_WINDOW = 10
 PORT_THRESHOLD = 5
 
