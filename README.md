@@ -1,7 +1,61 @@
 # Network Packet Analyzer with Anomaly Detection
 
-A Python-based packet analyzer using Scapy that detects:
-- Port scanning using a sliding time window
-- ARP spoofing using IP-to-MAC consistency
+## 📌 Overview
+This project is a **real-time network packet analyzer** built using **Python and Scapy**.  
+It captures live network traffic and detects **network anomalies** such as:
 
-Built for learning network security and IDS fundamentals.
+- 🔍 **Port scanning attacks** (using a sliding time window)
+- 🛑 **ARP spoofing attacks** (using IP-to-MAC consistency)
+
+The project focuses on **behavior-based detection**, similar to how basic **Intrusion Detection Systems (IDS)** work.
+
+---
+
+## 🚀 Features
+- Live packet capture on Linux (tested on Kali Linux)
+- Port scan detection using:
+  - Unique destination ports
+  - **Sliding time window** (reduces false positives)
+- ARP spoof detection by tracking IP → MAC changes
+- Noise reduction by detecting **state changes**, not raw packets
+- Handles common false positives (ephemeral ports, ARP probes)
+
+---
+
+## 🧠 Detection Logic
+
+### 🔹 Port Scan Detection
+- Tracks destination ports accessed by a source IP
+- Maintains a **10-second sliding time window**
+- Raises an alert if **5 or more unique ports** are accessed within the window
+- Old packets automatically expire from memory
+
+**Why time window?**  
+Port scans happen quickly, while normal browsing is spread over time.
+
+---
+
+### 🔹 ARP Spoof Detection
+- Monitors ARP packets on the local network
+- Stores the first observed MAC address for each IP
+- Raises an alert if the same IP claims a **different MAC address**
+- Ignores ARP probes (`0.0.0.0`) to reduce false alerts
+
+---
+
+## 🛠️ Technologies Used
+- **Python 3**
+- **Scapy**
+- Linux Networking (TCP/IP, ARP)
+
+---
+
+## 📦 Requirements
+- Python 3.x
+- Scapy
+- Linux OS (packet sniffing requires root privileges)
+
+Install dependencies:
+```bash
+pip install scapy
+
