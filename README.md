@@ -22,7 +22,7 @@ The project focuses on **behavior-based detection**, similar to how basic **Intr
 - ARP spoof detection by tracking IP → MAC changes
 - Noise reduction by detecting **state changes**, not raw packets
 - Handles common false positives (ephemeral ports, ARP probes)
-
+- Direction-aware detection (identifies the external scanner, not the local host)
 ---
 
 ## 🧠 Detection Logic
@@ -36,10 +36,11 @@ The project focuses on **behavior-based detection**, similar to how basic **Intr
   and systems without manual changes.
 
 ### 🔹 Port Scan Detection
-- Tracks destination ports accessed by a source IP
-- Maintains a **10-second sliding time window**
-- Raises an alert if **5 or more unique ports** are accessed within the window
-- Old packets automatically expire from memory
+- Detects **inbound TCP SYN packets** targeting the local host
+- Tracks destination ports probed by a single external source IP
+- Uses a **10-second sliding time window**
+- Raises an alert if **5 or more unique ports** are probed within the window
+- Filters out outbound traffic and ephemeral ports to reduce false positives
 
 **Why time window?**  
 Port scans happen quickly, while normal browsing is spread over time.
