@@ -2,10 +2,10 @@ from scapy.all import sniff, IP, TCP, ARP
 import time
 import socket
 
+# ---------------- HELPER ----------------
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # Doesn't actually connect, just figures out local IP
         s.connect(("8.8.8.8", 80))
         ip = s.getsockname()[0]
     except Exception:
@@ -14,26 +14,32 @@ def get_local_ip():
         s.close()
     return ip
 
-# ---------------- MEMORY ----------------
-ports = {}              # IP -> list of (port, time)
-last_ports_seen = {}    # IP -> last printed port set
-arp_table = {}
-
 # ---------------- CONFIG ----------------
 LOCAL_IP = get_local_ip()
 TIME_WINDOW = 10
 PORT_THRESHOLD = 5
 
+# ---------------- MEMORY ----------------
+ports = {}              # src_ip -> list of (dst_port, time)
+alerted_ips = set()
+arp_table = {}
+
+# ---------------- PACKET HANDLER ----------------
 def handle_packet(packet):
 
-    # ---------------- TCP / PORT SCAN ----------------
+    # ========== PORT SCAN DETECTION ==========
     if packet.haslayer(IP) and packet.haslayer(TCP):
 
         src_ip = packet[IP].src
+        dst_ip = packet[IP].dst
         dst_port = packet[TCP].dport
 
-        # Ignore packets not from our machine
-        if src_ip != LOCAL_IP:
+        # Only detect traffic COMING TO ME
+        if dst_ip != LOCAL_IP:
+            return
+
+        # Only detect NEW connection attempts
+        if packet[TCP].flags != "S":
             return
 
         current_time = time.time()
@@ -41,29 +47,27 @@ def handle_packet(packet):
         if src_ip not in ports:
             ports[src_ip] = []
 
-        # Store (port, time)
+        # Store destination port + time
         ports[src_ip].append((dst_port, current_time))
 
-        # -------- TIME WINDOW CLEANUP --------
+        # ---- TIME WINDOW CLEANUP ----
         ports[src_ip] = [
             (p, t) for (p, t) in ports[src_ip]
             if current_time - t <= TIME_WINDOW
         ]
 
-        # Count unique ports in window
-        unique_ports = {p for (p, t) in ports[src_ip]}
+        unique_ports = {p for (p, _ ) in ports[src_ip]}
 
-        # -------- NOISE REDUCTION --------
-        if src_ip not in last_ports_seen or last_ports_seen[src_ip] != unique_ports:
-            print(f"{src_ip} -> ports in last {TIME_WINDOW}s: {unique_ports}")
-            last_ports_seen[src_ip] = unique_ports.copy()
+        # ---- ALERT ONCE ----
+        if len(unique_ports) >= PORT_THRESHOLD and src_ip not in alerted_ips:
+            print(f"[ALERT] Possible port scan detected!")
+            print(f"Scanner IP : {src_ip}")
+            print(f"Target IP  : {LOCAL_IP}")
+            print(f"Ports      : {unique_ports}")
+            print("-" * 50)
+            alerted_ips.add(src_ip)
 
-        # -------- ALERT --------
-        if len(unique_ports) >= PORT_THRESHOLD:
-            print(f"[ALERT] Possible port scan from {src_ip}")
-            print("-" * 40)
-
-    # ---------------- ARP SPOOF DETECTION ----------------
+    # ========== ARP SPOOF DETECTION ==========
     if packet.haslayer(ARP):
 
         ip = packet[ARP].psrc
@@ -80,6 +84,9 @@ def handle_packet(packet):
         elif arp_table[ip] != mac:
             print("[ALERT] ARP spoof detected!")
             print(f"{ip} changed from {arp_table[ip]} to {mac}")
+            print("-" * 50)
 
-# ---------------- START SNIFFING ----------------
+# ---------------- START ----------------
+print(f"[*] Monitoring host IP: {LOCAL_IP}")
 sniff(prn=handle_packet)
+
